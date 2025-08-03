@@ -1,0 +1,40 @@
+services:
+  mysqldb:
+    image: mysql:8.0
+    container_name: mysqldb
+    restart: unless-stopped
+    environment:
+      # Environment variables are now directly in the docker-compose.yml file.
+      - MYSQL_ROOT_PASSWORD=admin@123
+      - MYSQL_DATABASE=smartcontact
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=admin@123
+    ports:
+      - "3307:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      # Health check to ensure the database is ready before the application starts.
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-padmin@123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  smart-contact-manager:
+    build: .
+    container_name: smart-contact-manager
+    ports:
+      - "8080:8080"
+    depends_on:
+      # The application service will now wait for the database to be healthy.
+      mysqldb:
+        condition: service_healthy
+    environment:
+      # Application properties are also directly defined.
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysqldb:3306/smartcontact?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=admin@123
+
+volumes:
+  db-data:
